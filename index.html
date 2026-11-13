@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>皮衣求生记：Jensen, Run!</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<!-- 标题画面 -->
+<section id="title-screen" class="screen active">
+  <div class="title-box">
+    <div class="title-jacket">🧥</div>
+    <h1>皮衣求生记</h1>
+    <h2>Jensen, Run!</h2>
+    <p class="tagline">被辞职后的 30 天 · 一部关于逃亡、重启与皮衣的数值模拟</p>
+    <div class="menu">
+      <button id="btn-new">新的人生</button>
+      <button id="btn-continue">继续</button>
+      <button id="btn-gallery">结局图鉴</button>
+      <button id="btn-about">免责声明</button>
+    </div>
+  </div>
+</section>
+
+<!-- 游戏画面 -->
+<section id="game-screen" class="screen">
+  <header id="topbar">
+    <div id="date-box"><span id="date-text"></span><span id="slot-text"></span></div>
+    <div id="day-progress"><span id="day-count"></span><span class="bar"><i id="b-days"></i></span></div>
+    <div class="ticker">NVDA <span id="s-nvda"></span></div>
+    <div class="top-btns"><button id="btn-menu" title="返回标题">🏠</button></div>
+  </header>
+
+  <div id="layout">
+    <aside id="stats"></aside>
+
+    <main id="main">
+      <div id="actions"></div>
+    </main>
+
+    <aside id="feed-box">
+      <h3>📰 动态</h3>
+      <div id="feed"></div>
+    </aside>
+  </div>
+
+  <div id="toasts"></div>
+</section>
+
+<!-- 事件弹窗（AVG 对话） -->
+<div id="event-overlay" class="overlay">
+  <div id="event-box" class="bg-hq">
+    <div id="event-title"></div>
+    <div id="event-art"></div>
+    <div id="event-choices"></div>
+    <div id="dialog">
+      <div id="speaker"></div>
+      <div id="text"></div>
+      <div id="next-hint">▼</div>
+    </div>
+  </div>
+</div>
+
+<!-- 结局卡片 -->
+<div id="ending-overlay" class="overlay">
+  <div class="card ending-card">
+    <div id="ending-type"></div>
+    <div class="ending-label">结局达成</div>
+    <h2 id="ending-title"></h2>
+    <p id="ending-desc"></p>
+    <div id="ending-stats"></div>
+    <p id="ending-count"></p>
+    <div class="menu row">
+      <button id="btn-again">再活一次</button>
+      <button id="btn-ending-gallery">结局图鉴</button>
+      <button id="btn-ending-title">返回标题</button>
+    </div>
+  </div>
+</div>
+
+<!-- 结局图鉴 -->
+<div id="gallery-overlay" class="overlay">
+  <div class="card">
+    <h2>结局图鉴 <span id="gallery-count"></span></h2>
+    <div id="gallery-list"></div>
+    <div class="menu row">
+      <button id="btn-gallery-reset" class="ghost">清空记录</button>
+      <button class="close-btn">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- 免责声明 -->
+<div id="about-overlay" class="overlay">
+  <div class="card about">
+    <h2>免责声明</h2>
+    <p>本作是一部<strong>讽刺恶搞性质的虚构作品</strong>，仅供娱乐。</p>
+    <p>故事以 2026 年 11 月的真实新闻为引子，但除新闻中公开报道的基本事实外，所有情节、对白、人物言行均为虚构创作，不代表任何真实人物的实际经历、言论或立场，也不构成对任何人或机构的事实陈述。</p>
+    <p>游戏中出现的公司、产品、政府机构名称仅用于戏仿，与相关方无任何关联，亦未获其授权。股价等数字均为虚构。</p>
+    <p>请勿将游戏内容当作新闻或事实传播。</p>
+    <div class="menu row"><button class="close-btn">我知道了</button></div>
+  </div>
+</div>
+
+<script src="story.js"></script>
+<script src="engine.js"></script>
+</body>
+</html>
