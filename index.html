@@ -6,13 +6,14 @@
 <meta name="theme-color" content="#0b0f0a">
 <meta name="description" content="被辞职后的 30 天：一部关于逃亡、重启与皮衣的恶搞数值模拟小游戏。">
 <title>皮衣求生记：Jensen, Run!</title>
-<!-- 修改 CSS/JS 后同步更新下面三处 ?v= 版本号，避免浏览器沿用缓存的旧文件 -->
-<link rel="stylesheet" href="style.css?v=20261113d">
+<!-- 修改 CSS/JS 后同步更新所有 ?v= 版本号，避免浏览器沿用缓存的旧文件 -->
+<link rel="stylesheet" href="style.css?v=20261113e">
 </head>
 <body>
 
 <!-- 标题画面 -->
 <section id="title-screen" class="screen active">
+  <button class="icon-btn btn-sound title-sound" aria-label="声音设置"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
   <div class="title-box">
     <p class="title-kicker">2026 年 11 月 12 日 · 圣克拉拉</p>
     <div class="title-jacket" aria-hidden="true">🧥</div>
@@ -45,6 +46,7 @@
       <span class="bar thin"><i id="b-days"></i></span>
     </div>
     <div class="tb-nvda" id="s-nvda"></div>
+    <button class="icon-btn btn-sound" aria-label="声音设置"><svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/><path d="M15.5 9a4 4 0 0 1 0 6M18 6.5a7.5 7.5 0 0 1 0 11" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/></svg></button>
     <button id="btn-menu" class="icon-btn" aria-label="返回标题">
       <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5M5.5 9.5V20h4.5v-6h4v6h4.5V9.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
     </button>
@@ -124,6 +126,17 @@
   </div>
 </div>
 
+<!-- 声音设置 -->
+<div id="sound-overlay" class="overlay">
+  <div class="card sound-card">
+    <div class="card-head"><h2>声音</h2></div>
+    <label class="opt"><span>背景音乐</span><input type="checkbox" id="opt-music"></label>
+    <label class="opt"><span>音效</span><input type="checkbox" id="opt-sfx"></label>
+    <label class="opt"><span>音量</span><input type="range" id="opt-volume" min="0" max="100" step="5"></label>
+    <div class="card-actions row"><button class="btn primary close-btn">好</button></div>
+  </div>
+</div>
+
 <!-- 免责声明 -->
 <div id="about-overlay" class="overlay">
   <div class="card about">
@@ -136,7 +149,8 @@
   </div>
 </div>
 
-<script src="story.js?v=20261113d"></script>
-<script src="engine.js?v=20261113d"></script>
+<script src="audio.js?v=20261113e"></script>
+<script src="story.js?v=20261113e"></script>
+<script src="engine.js?v=20261113e"></script>
 </body>
 </html>

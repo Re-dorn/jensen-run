@@ -12,6 +12,8 @@
   const resolve = (v, s) => (typeof v === 'function' ? v(s) : v);
   const clamp = (v, lo, hi) => Math.max(lo, Math.min(hi, v));
 
+  const snd = (m, ...a) => window.Sound && window.Sound[m](...a);
+
   let S = null;          // 当前状态
   let feed = [];         // 动态记录
   let ended = false;
@@ -29,7 +31,10 @@
 
   function showScreen(id) { document.querySelectorAll('.screen').forEach(s => s.classList.toggle('active', s.id === id)); }
   function openOverlay(id) { $(id).classList.add('show'); }
-  function closeOverlay(id) { $(id).classList.remove('show'); }
+  function closeOverlay(id) {
+    $(id).classList.remove('show');
+    if (id === 'event-overlay') snd('duck', false);
+  }
 
   function toast(msg, neg) {
     const el = document.createElement('div');
@@ -58,6 +63,12 @@
         const bad = k === 'heat' ? real > 0 : real < 0;
         toast(`${STAT_INFO[k].name} ${real > 0 ? '+' : ''}${k === 'cash' ? fmtCash(real) : real}`, bad);
       }
+    }
+    const keys = Object.keys(deltas);
+    if (keys.length) {
+      const bad = keys.some(k => (k === 'heat' ? deltas[k] > 0 : deltas[k] < 0));
+      snd('sfx', bad ? 'down' : deltas.cash > 0 ? 'cash' : 'up');
+      if (deltas.heat > 0 && S.heat >= 80 && S.heat - deltas.heat < 80) snd('sfx', 'alarm');
     }
     return deltas;
   }
@@ -108,6 +119,7 @@
     $('s-nvda').innerHTML = `NVDA<b>${S.nvda.toFixed(2)}</b><span class="${up ? 'up' : 'down'}">${up ? '+' : '−'}${pct}%</span>`;
     renderStats();
     renderActions();
+    snd('setTension', S.heat >= 80);
   }
 
   const pctOf = (v, max) => clamp(v / max * 100, 0, 100);
@@ -226,6 +238,7 @@
       clearInterval(typingTimer);
       typingTimer = setInterval(() => {
         el.textContent = text.slice(0, ++i);
+        snd('sfx', 'type');
         if (i >= text.length) { clearInterval(typingTimer); typingTimer = null; $('next-hint').classList.add('show'); }
       }, TYPE_SPEED);
       advanceResolver = res;
@@ -260,10 +273,11 @@
         b.innerHTML = `<span class="no">${i + 1}</span><span class="ct"></span>${typeof c.ending === 'string' ? '<span class="end-tag">直接进入结局</span>' : ''}`;
         b.querySelector('.ct').textContent = c.t;
         b.style.animationDelay = i * 70 + 'ms';
-        b.onclick = e => { e.stopPropagation(); box.classList.remove('show'); $('event-box').classList.remove('choosing'); res(c); };
+        b.onclick = e => { e.stopPropagation(); snd('sfx', 'confirm'); box.classList.remove('show'); $('event-box').classList.remove('choosing'); res(c); };
         box.appendChild(b);
       });
       box.classList.add('show');
+      snd('sfx', 'pop');
       $('event-box').classList.add('choosing');
     });
   }
@@ -281,6 +295,8 @@
     const ev = EVENTS[id];
     if (!ev) { console.error('未找到事件', id); return false; }
     S.flags['seen_' + id] = true;
+    snd('sfx', 'event');
+    snd('duck', true);
     openOverlay('event-overlay');
     setEventScene(ev);
     if (ev.nvda) { moveNvda(ev.nvda); render(); }
@@ -324,6 +340,7 @@
     $('ending-stats').innerHTML = `坚持到 ${dateOf(S.day)}（第 ${S.day} 天）<br>
       资金 ${fmtCash(S.cash)}美元 · 皮衣 ${S.jacket} 件 · 精神 ${S.mood} · 声望 ${S.rep} · 热度 ${S.heat}`;
     $('ending-count').innerHTML = `${isNew ? '<b>新结局</b> · ' : ''}已解锁 ${got.length} / ${Object.keys(ENDINGS).length} 个结局`;
+    snd('ending', e.type);
     openOverlay('ending-overlay');
     window.__lastEnding = id; // 供自动化测试读取
   }
@@ -331,7 +348,7 @@
   // 危机检查；返回 true 表示游戏结束
   async function critical() {
     for (let guard = 0; guard < 5; guard++) {
-      if (S.heat >= 100) { if (await playEvent('overheat')) return true; continue; }
+      if (S.heat >= 100) { snd('sfx', 'alarm'); if (await playEvent('overheat')) return true; continue; }
       if (S.mood <= 0) { await playEnding('collapse'); return true; }
       if (S.cash <= 0) { await playEnding('dishwasher'); return true; }
       if (S.jacket <= 0) { await playEnding('nojacket'); return true; }
@@ -403,6 +420,7 @@
     const deltas = applyFx({ cash: -cost, heat: -3, mood: -4 });
     moveNvda((Math.random() * 5 - 2.6) / 100);
     addFeed(`${dateOf(S.day)} 结束。律师费、生活费${S.flags.guard ? '、保镖费' : ''}照常扣除。${deltaHtml(deltas)}`, 'sys');
+    snd('sfx', 'day');
     if (S.cash < 800 && S.law < 3) addFeed('管家提醒：现金快见底了。多见几次律师，股票解冻后就能抛售一部分。', 'sys');
     render();
     if (await critical()) return;
@@ -428,6 +446,7 @@
     S = JSON.parse(JSON.stringify(INITIAL_STATE));
     feed = [];
     ended = false;
+    snd('startMusic');
     document.querySelectorAll('.overlay').forEach(o => o.classList.remove('show'));
     showScreen('game-screen');
     showPage('actions');
@@ -443,6 +462,7 @@
     S = sv.S;
     feed = sv.feed || [];
     ended = false;
+    snd('startMusic');
     showScreen('game-screen');
     showPage('actions');
     renderFeed();
@@ -473,6 +493,18 @@
   $('btn-continue').onclick = continueGame;
   $('btn-gallery').onclick = renderGallery;
   $('btn-about').onclick = () => openOverlay('about-overlay');
+
+  function openSound() {
+    const c = window.Sound ? window.Sound.cfg : { music: false, sfx: false, volume: 0.7 };
+    $('opt-music').checked = c.music;
+    $('opt-sfx').checked = c.sfx;
+    $('opt-volume').value = Math.round(c.volume * 100);
+    openOverlay('sound-overlay');
+  }
+  document.querySelectorAll('.btn-sound').forEach(b => { b.onclick = openSound; });
+  $('opt-music').onchange = e => snd('setMusic', e.target.checked);
+  $('opt-sfx').onchange = e => snd('setSfx', e.target.checked);
+  $('opt-volume').oninput = e => snd('setVolume', e.target.value / 100);
   $('btn-again').onclick = newGame;
   $('btn-ending-gallery').onclick = renderGallery;
   $('btn-ending-title').onclick = toTitle;
