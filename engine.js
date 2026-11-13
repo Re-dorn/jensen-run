@@ -49,7 +49,8 @@
       let v = before + d;
       if (['mood', 'rep', 'heat', 'cn', 'tw', 'biz', 'pol'].includes(k)) v = clamp(v, 0, 100);
       else if (k === 'law') v = clamp(v, 0, 3);
-      else if (k === 'jacket' || k === 'cook') v = Math.max(0, v);
+      else if (k === 'cook') v = clamp(v, 0, 8);
+      else if (k === 'jacket') v = Math.max(0, v);
       S[k] = v;
       const real = v - before;
       if (real) {
@@ -256,8 +257,8 @@
       $('next-hint').classList.remove('show');
       choices.forEach((c, i) => {
         const b = document.createElement('button');
-        b.innerHTML = `<span class="no">${i + 1}</span><span></span>`;
-        b.lastChild.textContent = c.t;
+        b.innerHTML = `<span class="no">${i + 1}</span><span class="ct"></span>${typeof c.ending === 'string' ? '<span class="end-tag">直接进入结局</span>' : ''}`;
+        b.querySelector('.ct').textContent = c.t;
         b.style.animationDelay = i * 70 + 'ms';
         b.onclick = e => { e.stopPropagation(); box.classList.remove('show'); $('event-box').classList.remove('choosing'); res(c); };
         box.appendChild(b);
@@ -289,12 +290,13 @@
     let c = choices.length ? await askChoice(choices) : { fx: {} };
     // 先用选择前的状态解析全部字段，再统一生效
     const o = c.run ? { ...c, ...c.run(S) } : c;
-    const r = { fx: resolve(o.fx, S), set: resolve(o.set, S), res: resolve(o.res, S), next: resolve(o.next, S), ending: resolve(o.ending, S) };
+    const r = { fx: resolve(o.fx, S), set: resolve(o.set, S), res: resolve(o.res, S), next: resolve(o.next, S), ending: resolve(o.ending, S), skip: resolve(o.skip, S) };
     if (r.set) Object.assign(S.flags, r.set);
     const deltas = applyFx(r.fx);
     render();
     if (c.t) addFeed(`${whenTag()}<span class="what">${ev.title}</span>${c.t}${deltaHtml(deltas)}`);
     if (r.res) await playLines(r.res);
+    if (r.skip) skipDays(r.skip);
 
     if (r.ending) { await playEnding(r.ending); return true; }
     if (r.next) return playEvent(r.next);
@@ -381,6 +383,16 @@
     if (r.event && await playEvent(r.event)) return;
     if (await critical()) return;
     await endSlot();
+  }
+
+  function skipDays(n) {
+    const days = Math.min(n, TOTAL_DAYS - S.day);
+    if (days <= 0) return;
+    const cost = (DAILY_COST + (S.flags.guard ? GUARD_COST : 0)) * days;
+    const deltas = applyFx({ cash: -cost, heat: -3 * days });
+    S.day += days;
+    addFeed(`离开了 ${days} 天，回来时已是${dateOf(S.day)}。这几天的开销照常扣除。${deltaHtml(deltas)}`, 'sys');
+    render();
   }
 
   async function endSlot() {

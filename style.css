@@ -320,6 +320,8 @@ h1 { font-family: var(--serif); font-size: 46px; font-weight: 700; letter-spacin
   transition: background .15s, border-color .15s;
 }
 #event-choices button .no { font-family: var(--mono); font-size: 12px; color: var(--accent); flex-shrink: 0; }
+#event-choices button .ct { flex: 1; }
+#event-choices button .end-tag { flex-shrink: 0; align-self: center; font-size: 11px; padding: 1px 6px; border: 1px solid var(--down); border-radius: 3px; color: var(--down); white-space: nowrap; }
 #event-choices button:hover { background: var(--hover); border-color: var(--accent); }
 #event-choices button:active { background: var(--press); }
 
