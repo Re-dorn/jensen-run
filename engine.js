@@ -421,7 +421,7 @@
     moveNvda((Math.random() * 5 - 2.6) / 100);
     addFeed(`${dateOf(S.day)} 结束。律师费、生活费${S.flags.guard ? '、保镖费' : ''}照常扣除。${deltaHtml(deltas)}`, 'sys');
     snd('sfx', 'day');
-    if (S.cash < 800 && S.law < 3) addFeed('管家提醒：现金快见底了。多见几次律师，股票解冻后就能抛售一部分。', 'sys');
+    if (S.cash < 800 && S.law < 3) addFeed('账面预警：流动现金快见底了。多见几次律师推进解冻，才能卖股票应急。', 'sys');
     render();
     if (await critical()) return;
 
