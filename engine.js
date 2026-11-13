@@ -54,9 +54,8 @@
       const real = v - before;
       if (real) {
         deltas[k] = real;
-        const info = STAT_INFO[k];
         const bad = k === 'heat' ? real > 0 : real < 0;
-        toast(`${info.icon} ${info.name} ${real > 0 ? '+' : ''}${k === 'cash' ? fmtCash(real) : real}`, bad);
+        toast(`${STAT_INFO[k].name} ${real > 0 ? '+' : ''}${k === 'cash' ? fmtCash(real) : real}`, bad);
       }
     }
     return deltas;
@@ -64,9 +63,8 @@
 
   function deltaHtml(deltas) {
     const parts = Object.entries(deltas).map(([k, d]) => {
-      const info = STAT_INFO[k];
       const bad = k === 'heat' ? d > 0 : d < 0;
-      return `<span class="${bad ? 'n' : 'p'}">${info.icon}${d > 0 ? '+' : ''}${k === 'cash' ? fmtCash(d) : d}</span>`;
+      return `<span class="${bad ? 'n' : 'p'}">${STAT_INFO[k].name} ${d > 0 ? '+' : ''}${k === 'cash' ? fmtCash(d) : d}</span>`;
     });
     return parts.length ? `<span class="dl">${parts.join('')}</span>` : '';
   }
@@ -76,84 +74,135 @@
     S.nvda = Math.max(1, +(S.nvda * (1 + pct)).toFixed(2));
   }
 
-  // ───── 动态 ─────
+  // ───── 手记（动态） ─────
   function addFeed(html, cls = '') {
     feed.unshift({ html, cls });
     if (feed.length > 120) feed.length = 120;
     renderFeed();
   }
   function renderFeed() {
-    $('feed').innerHTML = feed.map(f => `<div class="fd ${f.cls}">${f.html}</div>`).join('');
+    const item = f => `<div class="fd ${f.cls}">${f.html}</div>`;
+    const empty = '<p class="fd-empty">还什么都没发生。先挑一件事做吧。</p>';
+    $('feed').innerHTML = feed.length ? feed.map(item).join('') : empty;
+    $('recent-list').innerHTML = feed.length ? feed.slice(0, 3).map(item).join('') : empty;
   }
-  const whenTag = () => `<span class="when">${dateOf(S.day)} ${S.slot ? '晚上' : '白天'}</span><br>`;
+  const whenTag = () => `<span class="when">${dateOf(S.day)} · ${S.slot ? '晚上' : '白天'}</span>`;
 
   // ───── 渲染 ─────
+  const KEY_ACTIONS = ['cn_go', 'tw_go', 'pitch', 'gift', 'sell'];
+  const ITEM_NAME = { jacket: '第 47 号皮衣', chip: '工程样片', oven: '烤箱', mug: '最佳 CEO 马克杯' };
+  const catLabel = cat => CATEGORIES[cat].replace(/^\S+\s+/, '');
+  let activeTab = 'life';
+
   function render() {
     $('date-text').textContent = `${dateOf(S.day)} ${WEEKDAYS[(S.day - 1) % 7]}`;
-    $('slot-text').textContent = S.slot ? '🌙 晚上' : '☀️ 白天';
-    $('day-count').textContent = `第 ${S.day}/${TOTAL_DAYS} 天`;
+    const slot = $('slot-text');
+    slot.textContent = S.slot ? '晚上' : '白天';
+    slot.classList.toggle('night', !!S.slot);
+    $('day-count').textContent = `第 ${S.day} / ${TOTAL_DAYS} 天`;
     $('b-days').style.width = (S.day / TOTAL_DAYS * 100) + '%';
     const prev = S.prevNvda || S.nvda;
     const up = S.nvda >= prev;
     const pct = Math.abs((S.nvda - prev) / prev * 100).toFixed(2);
-    $('s-nvda').innerHTML = `$${S.nvda.toFixed(2)} <span class="${up ? 'up' : 'down'}">${up ? '▲' : '▼'}${pct}%</span>`;
+    $('s-nvda').innerHTML = `NVDA<b>${S.nvda.toFixed(2)}</b><span class="${up ? 'up' : 'down'}">${up ? '+' : '−'}${pct}%</span>`;
     renderStats();
     renderActions();
   }
 
-  function statRow(k, val, max, extra = '') {
-    const info = STAT_INFO[k];
-    return `<div class="st ${extra}"><span class="lb">${info.icon} ${info.name}</span>
-      <span class="bar"><i style="width:${clamp(val / max * 100, 0, 100)}%"></i></span><span class="val">${val}</span></div>`;
+  const pctOf = (v, max) => clamp(v / max * 100, 0, 100);
+
+  function meter(k, val, max, cls = '') {
+    return `<div class="meter ${cls}"><span class="lb">${STAT_INFO[k].name}</span>
+      <span class="bar"><i style="width:${pctOf(val, max)}%"></i></span><span class="v">${max === 100 ? val : val + '/' + max}</span></div>`;
+  }
+
+  function cashParts(v) {
+    return Math.abs(v) >= 10000 ? [(v / 10000).toFixed(2), '亿美元'] : [String(v), '万美元'];
   }
 
   function renderStats() {
-    let h = '<h4>基本状况</h4>';
-    h += `<div class="st big ${S.cash < 500 ? 'danger' : ''}"><span class="lb">💵 资金</span><span class="val">${fmtCash(S.cash)}美元</span></div>`;
-    h += `<div class="st big ${S.jacket <= 1 ? 'danger' : ''}"><span class="lb">🧥 皮衣</span><span class="val">${S.jacket} 件</span></div>`;
-    h += statRow('mood', S.mood, 100, S.mood <= 20 ? 'danger' : '');
-    h += statRow('rep', S.rep, 100);
-    h += statRow('heat', S.heat, 100, 'heat' + (S.heat >= 80 ? ' danger' : ''));
+    const danger = { cash: S.cash < 500, jacket: S.jacket <= 1, mood: S.mood <= 20, heat: S.heat >= 80 };
+    const [cv, cu] = cashParts(S.cash);
+
+    // 账页（桌面左栏 / 手机“状态”页）
+    let h = `<div class="ledger-big">
+      <div class="${danger.cash ? 'danger' : ''}"><div class="lb">可动用资金</div><div class="v">${cv}<span class="u">${cu}</span></div></div>
+      <div class="right ${danger.jacket ? 'danger' : ''}"><div class="lb">皮衣</div><div class="v">${S.jacket}<span class="u">件</span></div></div>
+    </div>`;
+    h += '<h4 class="sec-title">基本状况</h4>';
+    h += meter('mood', S.mood, 100, danger.mood ? 'danger' : '');
+    h += meter('rep', S.rep, 100);
+    h += meter('heat', S.heat, 100, 'heat' + (danger.heat ? ' danger' : ''));
 
     const routes = ['cn', 'tw', 'biz', 'pol'].filter(k => S.flags[STAT_INFO[k].flag]);
+    h += '<h4 class="sec-title">路线进度</h4>';
     if (routes.length || S.cook || S.law) {
-      h += '<h4>进度</h4>';
-      routes.forEach(k => { h += statRow(k, S[k], 100, 'route'); });
-      if (S.cook) h += statRow('cook', S.cook, 8, 'route');
-      if (S.law) h += statRow('law', S.law, 3, 'route');
+      routes.forEach(k => { h += meter(k, S[k], 100, 'route'); });
+      if (S.cook) h += meter('cook', S.cook, 8, 'route');
+      if (S.law) h += meter('law', S.law, 3, 'route');
+    } else {
+      h += '<p class="hint-text">还没有找到出路。翻翻手机里的未读消息，也许有人在等你回复。</p>';
     }
 
     const tags = [];
-    const itemName = { jacket: '🧥 第 47 号皮衣', chip: '💾 工程样片', oven: '🔥 烤箱', mug: '☕ 最佳 CEO 马克杯' }[S.flags.item];
-    if (itemName) tags.push(itemName);
-    if (S.flags.guard) tags.push('🛡️ 保镖大卫');
-    if (S.flags.pitchCat) tags.push('🐱 猫猫赛道');
-    else if (S.flags.pitched) tags.push('💼 已路演');
-    if (S.flags.hearingGood) tags.push('⚖️ 国会讲解员');
-    if (S.flags.leatherBoom) tags.push('📈 皮衣热');
-    if (tags.length) h += `<h4>状态</h4><div class="status-tags">${tags.map(t => `<span class="tag">${t}</span>`).join('')}</div>`;
-    h += `<h4>每日开销</h4><div class="st"><span class="lb" style="width:auto;color:var(--muted)">${DAILY_COST + (S.flags.guard ? GUARD_COST : 0)} 万美元 / 天</span></div>`;
+    if (ITEM_NAME[S.flags.item]) tags.push(ITEM_NAME[S.flags.item]);
+    if (S.flags.guard) tags.push('保镖大卫');
+    if (S.flags.pitchCat) tags.push('猫猫赛道');
+    else if (S.flags.pitched) tags.push('已路演');
+    if (S.flags.hearingGood) tags.push('国会讲解员');
+    if (S.flags.leatherBoom) tags.push('皮衣热');
+    if (tags.length) h += `<h4 class="sec-title">随身</h4><div class="tags">${tags.map(t => `<span>${t}</span>`).join('')}</div>`;
+    h += `<div class="cost"><span>每日开销</span><b>${DAILY_COST + (S.flags.guard ? GUARD_COST : 0)} 万美元</b></div>`;
     $('stats').innerHTML = h;
+
+    // 手机顶部数值条
+    const chip = (lb, v, cls, bar) => `<div class="chip ${cls}"><div class="lb">${lb}</div><div class="v">${v}</div>${bar != null ? `<span class="bar"><i style="width:${bar}%"></i></span>` : ''}</div>`;
+    $('strip').innerHTML =
+      chip('资金', `${cv}<small>${cu.replace('美元', '')}</small>`, danger.cash ? 'danger' : '') +
+      chip('皮衣', `${S.jacket}<small>件</small>`, danger.jacket ? 'danger' : '') +
+      chip('精神', S.mood, danger.mood ? 'danger' : '', S.mood) +
+      chip('声望', S.rep, '', S.rep) +
+      chip('热度', S.heat, 'heat' + (danger.heat ? ' danger' : ''), S.heat);
   }
 
   function renderActions() {
-    const box = $('actions');
-    box.innerHTML = '';
-    for (const [cat, label] of Object.entries(CATEGORIES)) {
-      if (CAT_FLAG[cat] && !S.flags[CAT_FLAG[cat]]) continue;
+    const cats = Object.keys(CATEGORIES).filter(c => !CAT_FLAG[c] || S.flags[CAT_FLAG[c]]);
+    if (!cats.includes(activeTab)) activeTab = 'life';
+
+    $('tabs').innerHTML = cats.map(c =>
+      `<button role="tab" data-cat="${c}" class="${c === activeTab ? 'active' : ''}" aria-selected="${c === activeTab}">${catLabel(c)}</button>`).join('');
+    $('tabs').querySelectorAll('button').forEach(b => {
+      b.onclick = () => { activeTab = b.dataset.cat; renderActions(); };
+    });
+
+    let html = '';
+    for (const cat of cats) {
       const list = ACTIONS.filter(a => a.cat === cat);
-      const items = list.map(a => {
-        const ok = !a.if || a.if(S);
-        if (!ok && !a.need) return '';
-        return `<button class="act ${ok ? '' : 'locked'}" data-id="${a.id}" ${ok ? '' : 'disabled'}>
-          <span class="nm">${a.icon} ${a.name}</span><span class="ht">${ok ? a.hint : '🔒 需要 ' + a.need}</span></button>`;
-      }).join('');
-      if (items.trim()) box.insertAdjacentHTML('beforeend', `<div class="cat"><h3>${label}</h3><div class="acts">${items}</div></div>`);
+      const avail = a => !a.if || a.if(S);
+      const keys = list.filter(a => KEY_ACTIONS.includes(a.id) && avail(a));
+      const normal = list.filter(a => !keys.includes(a) && avail(a));
+      const locked = list.filter(a => !avail(a) && a.need);
+      if (!keys.length && !normal.length && !locked.length) continue;
+
+      html += `<section class="cat ${cat === activeTab ? 'show' : ''}"><div class="cat-title"><h3>${catLabel(cat)}</h3></div>`;
+      html += keys.map(a => `<button class="key-act" data-id="${a.id}"><span class="tag">关键一步</span><span class="nm">${a.name}</span><span class="ht">${a.hint}</span></button>`).join('');
+      html += '<div class="acts">';
+      html += normal.map(a => `<button class="act" data-id="${a.id}"><span class="nm">${a.name}</span><span class="ht">${a.hint}</span></button>`).join('');
+      html += locked.map(a => `<button class="act locked" disabled><span class="nm">${a.name}</span><span class="ht">需要 ${a.need}</span></button>`).join('');
+      html += '</div></section>';
     }
-    box.querySelectorAll('.act:not(:disabled)').forEach(b => { b.onclick = () => doAction(b.dataset.id); });
+    $('actions').innerHTML = html;
+    $('actions').querySelectorAll('[data-id]').forEach(b => { b.onclick = () => doAction(b.dataset.id); });
   }
 
-  const setBusy = v => $('actions').classList.toggle('busy', v);
+  const setBusy = v => $('main').classList.toggle('busy', v);
+
+  function showPage(p) {
+    document.querySelectorAll('#layout .page').forEach(el => el.classList.toggle('active', el.dataset.page === p));
+    document.querySelectorAll('#bottom-nav button').forEach(b => b.classList.toggle('active', b.dataset.page === p));
+    const el = document.querySelector(`#layout .page[data-page="${p}"]`);
+    if (el) el.scrollTop = 0;
+  }
 
   // ───── 对话播放 ─────
   let advanceResolver = null;
@@ -207,12 +256,14 @@
       $('next-hint').classList.remove('show');
       choices.forEach((c, i) => {
         const b = document.createElement('button');
-        b.textContent = c.t;
+        b.innerHTML = `<span class="no">${i + 1}</span><span></span>`;
+        b.lastChild.textContent = c.t;
         b.style.animationDelay = i * 70 + 'ms';
-        b.onclick = e => { e.stopPropagation(); box.classList.remove('show'); res(c); };
+        b.onclick = e => { e.stopPropagation(); box.classList.remove('show'); $('event-box').classList.remove('choosing'); res(c); };
         box.appendChild(b);
       });
       box.classList.add('show');
+      $('event-box').classList.add('choosing');
     });
   }
 
@@ -242,7 +293,7 @@
     if (r.set) Object.assign(S.flags, r.set);
     const deltas = applyFx(r.fx);
     render();
-    if (c.t) addFeed(`${whenTag()}<span class="what">【${ev.title}】</span>${c.t}${deltaHtml(deltas)}`);
+    if (c.t) addFeed(`${whenTag()}<span class="what">${ev.title}</span>${c.t}${deltaHtml(deltas)}`);
     if (r.res) await playLines(r.res);
 
     if (r.ending) { await playEnding(r.ending); return true; }
@@ -269,8 +320,8 @@
     $('ending-title').textContent = `「${e.title}」`;
     $('ending-desc').textContent = e.desc;
     $('ending-stats').innerHTML = `坚持到 ${dateOf(S.day)}（第 ${S.day} 天）<br>
-      💵 ${fmtCash(S.cash)}美元 · 🧥 ${S.jacket} 件 · 🧠 ${S.mood} · 🎩 ${S.rep} · 🔥 ${S.heat}`;
-    $('ending-count').textContent = `${isNew ? '🆕 新结局！' : ''}已解锁 ${got.length} / ${Object.keys(ENDINGS).length} 个结局`;
+      资金 ${fmtCash(S.cash)}美元 · 皮衣 ${S.jacket} 件 · 精神 ${S.mood} · 声望 ${S.rep} · 热度 ${S.heat}`;
+    $('ending-count').innerHTML = `${isNew ? '<b>新结局</b> · ' : ''}已解锁 ${got.length} / ${Object.keys(ENDINGS).length} 个结局`;
     openOverlay('ending-overlay');
     window.__lastEnding = id; // 供自动化测试读取
   }
@@ -325,7 +376,7 @@
     if (r.set) Object.assign(S.flags, r.set);
     if (r.nvda) moveNvda(r.nvda);
     const deltas = applyFx(r.fx);
-    addFeed(`${whenTag()}<span class="what">${a.icon} ${a.name}</span>：${r.text || ''}${deltaHtml(deltas)}`);
+    addFeed(`${whenTag()}<span class="what">${a.name}</span>${r.text || ''}${deltaHtml(deltas)}`);
     render();
     if (r.event && await playEvent(r.event)) return;
     if (await critical()) return;
@@ -339,8 +390,8 @@
     const cost = DAILY_COST + (S.flags.guard ? GUARD_COST : 0);
     const deltas = applyFx({ cash: -cost, heat: -3, mood: -4 });
     moveNvda((Math.random() * 5 - 2.6) / 100);
-    addFeed(`🌙 ${dateOf(S.day)} 结束。律师费、生活费${S.flags.guard ? '、保镖费' : ''}照常扣除。${deltaHtml(deltas)}`, 'sys');
-    if (S.cash < 800 && S.law < 3) addFeed('⚠️ 管家提醒：现金快见底了。多见几次律师，股票解冻后就能抛售一部分。', 'sys');
+    addFeed(`${dateOf(S.day)} 结束。律师费、生活费${S.flags.guard ? '、保镖费' : ''}照常扣除。${deltaHtml(deltas)}`, 'sys');
+    if (S.cash < 800 && S.law < 3) addFeed('管家提醒：现金快见底了。多见几次律师，股票解冻后就能抛售一部分。', 'sys');
     render();
     if (await critical()) return;
 
@@ -367,6 +418,7 @@
     ended = false;
     document.querySelectorAll('.overlay').forEach(o => o.classList.remove('show'));
     showScreen('game-screen');
+    showPage('actions');
     renderFeed();
     render();
     setBusy(true);
@@ -380,6 +432,7 @@
     feed = sv.feed || [];
     ended = false;
     showScreen('game-screen');
+    showPage('actions');
     renderFeed();
     render();
     setBusy(false);
@@ -415,6 +468,8 @@
   $('btn-gallery-reset').onclick = () => { if (confirm('确定要清空所有结局记录吗？')) { saveEndings([]); renderGallery(); } };
   document.querySelectorAll('.close-btn').forEach(b => { b.onclick = () => b.closest('.overlay').classList.remove('show'); });
   $('event-box').onclick = onAdvance;
+  document.querySelectorAll('#bottom-nav button').forEach(b => { b.onclick = () => showPage(b.dataset.page); });
+  $('btn-more-feed').onclick = () => showPage('feed');
   document.addEventListener('keydown', e => {
     if (!$('event-overlay').classList.contains('show')) return;
     if (e.key === ' ' || e.key === 'Enter') { e.preventDefault(); onAdvance(); }

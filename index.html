@@ -2,7 +2,9 @@
 <html lang="zh-CN">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#17110d">
+<meta name="description" content="被辞职后的 30 天：一部关于逃亡、重启与皮衣的恶搞数值模拟小游戏。">
 <title>皮衣求生记：Jensen, Run!</title>
 <link rel="stylesheet" href="style.css">
 </head>
@@ -11,15 +13,21 @@
 <!-- 标题画面 -->
 <section id="title-screen" class="screen active">
   <div class="title-box">
-    <div class="title-jacket">🧥</div>
+    <p class="title-kicker">2026 年 11 月 12 日 · 圣克拉拉</p>
+    <div class="title-jacket" aria-hidden="true">🧥</div>
     <h1>皮衣求生记</h1>
-    <h2>Jensen, Run!</h2>
-    <p class="tagline">被辞职后的 30 天 · 一部关于逃亡、重启与皮衣的数值模拟</p>
+    <p class="title-sub">Jensen, Run!</p>
+    <div class="title-note">
+      <p>门禁卡刷不开了，屏幕上写着：<b>访客</b>。</p>
+      <p>接下来 30 天，想办法活下去。</p>
+    </div>
     <div class="menu">
-      <button id="btn-new">新的人生</button>
-      <button id="btn-continue">继续</button>
-      <button id="btn-gallery">结局图鉴</button>
-      <button id="btn-about">免责声明</button>
+      <button id="btn-new" class="btn primary">新的人生</button>
+      <button id="btn-continue" class="btn">继续</button>
+      <div class="menu-row">
+        <button id="btn-gallery" class="btn ghost">结局图鉴</button>
+        <button id="btn-about" class="btn ghost">免责声明</button>
+      </div>
     </div>
   </div>
 </section>
@@ -27,26 +35,47 @@
 <!-- 游戏画面 -->
 <section id="game-screen" class="screen">
   <header id="topbar">
-    <div id="date-box"><span id="date-text"></span><span id="slot-text"></span></div>
-    <div id="day-progress"><span id="day-count"></span><span class="bar"><i id="b-days"></i></span></div>
-    <div class="ticker">NVDA <span id="s-nvda"></span></div>
-    <div class="top-btns"><button id="btn-menu" title="返回标题">🏠</button></div>
+    <div class="tb-date">
+      <span id="date-text"></span>
+      <span id="slot-text"></span>
+    </div>
+    <div class="tb-day">
+      <span id="day-count"></span>
+      <span class="bar thin"><i id="b-days"></i></span>
+    </div>
+    <div class="tb-nvda" id="s-nvda"></div>
+    <button id="btn-menu" class="icon-btn" aria-label="返回标题">
+      <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path d="M3 11.5 12 4l9 7.5M5.5 9.5V20h4.5v-6h4v6h4.5V9.5" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/></svg>
+    </button>
   </header>
 
-  <div id="layout">
-    <aside id="stats"></aside>
+  <div id="strip"></div>
 
-    <main id="main">
+  <div id="layout">
+    <aside id="stats" class="page" data-page="stats"></aside>
+
+    <main id="main" class="page active" data-page="actions">
+      <nav id="tabs" role="tablist" aria-label="行动分类"></nav>
       <div id="actions"></div>
+      <section id="recent" class="napkin">
+        <div class="napkin-head"><h3>最近手记</h3><button id="btn-more-feed" class="link-btn">全部</button></div>
+        <div id="recent-list"></div>
+      </section>
     </main>
 
-    <aside id="feed-box">
-      <h3>📰 动态</h3>
+    <aside id="feed-box" class="page napkin" data-page="feed">
+      <div class="napkin-head"><h3>手记</h3></div>
       <div id="feed"></div>
     </aside>
   </div>
 
-  <div id="toasts"></div>
+  <nav id="bottom-nav" aria-label="页面">
+    <button data-page="actions" class="active">行动</button>
+    <button data-page="stats">状态</button>
+    <button data-page="feed">手记</button>
+  </nav>
+
+  <div id="toasts" aria-live="polite"></div>
 </section>
 
 <!-- 事件弹窗（AVG 对话） -->
@@ -58,24 +87,26 @@
     <div id="dialog">
       <div id="speaker"></div>
       <div id="text"></div>
-      <div id="next-hint">▼</div>
+      <div id="next-hint" aria-hidden="true"></div>
     </div>
   </div>
 </div>
 
 <!-- 结局卡片 -->
 <div id="ending-overlay" class="overlay">
-  <div class="card ending-card">
+  <div class="card paper ending-card">
     <div id="ending-type"></div>
     <div class="ending-label">结局达成</div>
     <h2 id="ending-title"></h2>
     <p id="ending-desc"></p>
     <div id="ending-stats"></div>
     <p id="ending-count"></p>
-    <div class="menu row">
-      <button id="btn-again">再活一次</button>
-      <button id="btn-ending-gallery">结局图鉴</button>
-      <button id="btn-ending-title">返回标题</button>
+    <div class="card-actions">
+      <button id="btn-again" class="btn primary">再活一次</button>
+      <div class="menu-row">
+        <button id="btn-ending-gallery" class="btn">结局图鉴</button>
+        <button id="btn-ending-title" class="btn">返回标题</button>
+      </div>
     </div>
   </div>
 </div>
@@ -83,11 +114,11 @@
 <!-- 结局图鉴 -->
 <div id="gallery-overlay" class="overlay">
   <div class="card">
-    <h2>结局图鉴 <span id="gallery-count"></span></h2>
+    <div class="card-head"><h2>结局图鉴</h2><span id="gallery-count"></span></div>
     <div id="gallery-list"></div>
-    <div class="menu row">
-      <button id="btn-gallery-reset" class="ghost">清空记录</button>
-      <button class="close-btn">关闭</button>
+    <div class="card-actions row">
+      <button id="btn-gallery-reset" class="btn ghost small">清空记录</button>
+      <button class="btn close-btn">关闭</button>
     </div>
   </div>
 </div>
@@ -95,12 +126,12 @@
 <!-- 免责声明 -->
 <div id="about-overlay" class="overlay">
   <div class="card about">
-    <h2>免责声明</h2>
+    <div class="card-head"><h2>免责声明</h2></div>
     <p>本作是一部<strong>讽刺恶搞性质的虚构作品</strong>，仅供娱乐。</p>
     <p>故事以 2026 年 11 月的真实新闻为引子，但除新闻中公开报道的基本事实外，所有情节、对白、人物言行均为虚构创作，不代表任何真实人物的实际经历、言论或立场，也不构成对任何人或机构的事实陈述。</p>
     <p>游戏中出现的公司、产品、政府机构名称仅用于戏仿，与相关方无任何关联，亦未获其授权。股价等数字均为虚构。</p>
     <p>请勿将游戏内容当作新闻或事实传播。</p>
-    <div class="menu row"><button class="close-btn">我知道了</button></div>
+    <div class="card-actions row"><button class="btn primary close-btn">我知道了</button></div>
   </div>
 </div>
 
